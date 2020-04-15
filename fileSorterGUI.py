@@ -1,7 +1,9 @@
 from tkinter import *
 from tkinter import filedialog #Lets use file browser
 from tkinter.ttk import Progressbar #Lets use progress bar
-from fileSorter import *
+from fileSorterCLI import *
+import time
+from tkinter import messagebox
 
 window = Tk()
 window.geometry('500x300')
@@ -68,6 +70,29 @@ bar.grid(column=0, columnspan = 3, row=4,  sticky = W+E, pady= 10, padx = 10)
 
 #_________________________________________________ROW 5:
 
+def mainProcess_GUImode(sourcePath, destinyPath, threshold = -1):
+    totalAmoutnFiles = len(os.listdir(sourcePath))
+    if threshold == -1:
+        threshold = totalAmoutnFiles
+    count = 0
+    #print(threshold)
+    with os.scandir(sourcePath) as files:
+        for file in files:
+            sortFile(sourcePath, file, destinyPath)   
+
+            percent = (count * 100) / threshold
+            print(str(percent) + "%")
+            bar['value'] = percent
+            window.update_idletasks()
+            time.sleep(0.1)
+
+            count = count + 1
+            if count >= threshold:
+                break;
+    bar['value'] = 100
+    print("\n DONE!")
+    messagebox.showinfo(title="Info", message="Done!")
+
 def callPhotoSorter():
     sourcePath =sourceFolder_txtbox.get()
     destinyPath = destinyFolder_txtbox.get()
@@ -87,11 +112,11 @@ def callPhotoSorter():
     if(source_isOK and destiny_isOK):
         if (threshold is None or threshold == " " or 0 == len(threshold)):
                 print("All the files will be processed...")
-                main(sourcePath, destinyPath)
+                mainProcess_GUImode(sourcePath, destinyPath)
         else:
             if threshold.isnumeric():
                 print("Only " + str(threshold) + " files")
-                main(sourcePath, destinyPath, int(threshold))
+                mainProcess_GUImode(sourcePath, destinyPath, int(threshold))
             else:
                 print("Wrong limit value entered")
         #print(sourcePath)
