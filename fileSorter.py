@@ -13,51 +13,50 @@ def createFolder(onWorkPath):
         os.umask(0)
         os.makedirs(onWorkPath, 7777)
 
-def main():
-    inputPath = " "
-    outputPath = " "
-    pathFolder = ".\samplePictures"
-    threshold = input("how many photos do you want to process? (Write 'all' to process the entry folder)")
-    if threshold == "" or threshold == "all":
-        threshold = len(os.listdir(pathFolder))
+def main(sourcePath, destinyPath, threshold = -1):
+    totalAmoutnFiles = len(os.listdir(sourcePath))
+    if threshold == -1:
+        threshold = totalAmoutnFiles
+    count = 0
+    #print(threshold)
+    with os.scandir(sourcePath) as files:
+        for file in files:
+            sourceFilePath = os.path.join(sourcePath, file.name)
+            if os.path.isdir(sourceFilePath): #if the current analized file is a directory skips it because we are only looking for files || FYI shutil copy can not copy folders, instead use copytree
+                continue
+            else:
+                fileProperties = file.stat()#get the properties file
+                lastModificationDate = convert_date(fileProperties.st_mtime) #get Last Modification date and convert it from epoch to human format
+                destinyFileFolderPath = os.path.join(destinyPath, lastModificationDate)
+                
+                print(sourceFilePath + " || " + lastModificationDate  + "  -->  " + destinyFileFolderPath)
+                
+                createFolder(destinyFileFolderPath)
+                if(False == os.path.exists(destinyFileFolderPath + "\\" +file.name)):
+                    shutil.copy2(sourceFilePath, destinyFileFolderPath) # FYI shutil copy can not copy folders, instead use copytree
+                else:
+                    print("There is a file with the same name on the destiny folder")
+
+            if __name__ != "__main__":
+                percent = (count * 100) / totalAmoutnFiles                
+
+            count = count + 1
+            if count >= threshold:
+                break;
+    print("DONE!")
+
+
+if __name__== "__main__":
+    sourcePath = "./"
+    destinyPath = "./"
+    print ("There are: " + str(len(os.listdir(sourcePath))) + " files in the source folder.")
+    threshold = input ("Limit for this job (leave it blanks if you want to process al the files): ")
+    if (threshold is None or threshold == " " or 0 == len(threshold)):
+        print("All the files will be processed...")
+        main(sourcePath, destinyPath)
     else:
         if threshold.isnumeric():
-            threshold = int(threshold)
+            print("Only " + str(threshold) + " files")
+            main(sourcePath, destinyPath, int(threshold))
         else:
-            threshold = -1
-            print("Wrong input")
-    count = 0
-    with os.scandir(pathFolder) as files:
-        while count < threshold:
-            for file in files:
-                sourceFilePath = os.path.join(pathFolder, file.name)
-                if os.path.isdir(sourceFilePath): #if the current analized file is a directory skips it because we are only looking for files || FYI shutil copy can not copy folders, instead use copytree
-                    continue
-                else:
-                    fileProperties = file.stat()#get the properties file
-                    lastModificationDate = convert_date(fileProperties.st_mtime) #get Last Modification date and convert it from epoch to human format
-                    destinyFileFolderPath = os.path.join(pathFolder, lastModificationDate)
-                    
-                    print(sourceFilePath + " || " + lastModificationDate  + "  -->  " + destinyFileFolderPath)
-                    
-                    createFolder(destinyFileFolderPath)
-                    if(False == os.path.exists(destinyFileFolderPath + "\\" +file.name)):
-                        shutil.copy2(sourceFilePath, destinyFileFolderPath) # FYI shutil copy can not copy folders, instead use copytree
-                    else:
-                        print("There is a file with the same name on the destiny folder")
-                    
-                count += 1
-
-def recivingParameters(sourcePath, destinyPath, threshold):
-    print(os.listdir(sourcePath))
-    print(os.listdir(sourcePath))
-    print(threshold)
-
-
-    print("DONE!")
-if __name__== "__main__":
-    #sourcePath = "./"
-    #destinyPath = "./"
-    #threshold = input ("Limit for this job (leave it blanks if you want to process al the files): ")
-    #recivingParameters(sourcePath, destinyPath, threshold)
-    main()
+            print("Wrong limit value entered")
