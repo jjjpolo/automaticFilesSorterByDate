@@ -54,6 +54,7 @@ def mainProcess_climode(sourcePath, destinyPath, threshold = -1, keepOriginalFil
 
 
 if __name__== "__main__":
+    print("Automatic Photo Sorter v1.0.0")
     sourcePath = "./"
     destinyPath = "./"
     print ("There are: " + str(len(os.listdir(sourcePath))) + " files in the source folder.")
