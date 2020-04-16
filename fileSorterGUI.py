@@ -7,7 +7,7 @@ from tkinter import messagebox
 
 window = Tk()
 window.geometry('500x300')
-window.title("Automatic Photo Sorter")
+window.title("Automatic Photo Sorter v1.0.0")
 
 #_________________________________________________ROW 0:
 
@@ -73,7 +73,12 @@ bar.grid(column=0, columnspan = 3, row=4,  sticky = W+E, pady= 10, padx = 10)
 
 #_________________________________________________ROW 5:
 
-def mainProcess_GUImode(sourcePath, destinyPath, threshold = -1):
+keepOriginalFile_state = BooleanVar()
+keepOriginalFile_state.set(True) #set check state
+keepFiles_checkbox = Checkbutton(window, text='Keep original files', var=keepOriginalFile_state, font=("Arial Bold", 10))
+keepFiles_checkbox.grid(column=0, row=5, padx=(10,0))
+
+def mainProcess_GUImode(sourcePath, destinyPath, threshold = -1, keepOriginalFile = True):
     totalAmoutnFiles = len(os.listdir(sourcePath))
     if threshold == -1:
         threshold = totalAmoutnFiles
@@ -81,7 +86,7 @@ def mainProcess_GUImode(sourcePath, destinyPath, threshold = -1):
     #print(threshold)
     with os.scandir(sourcePath) as files:
         for file in files:
-            sortFile(sourcePath, file, destinyPath)   
+            sortFile(sourcePath, file, destinyPath, keepOriginalFile)   
 
             percent = (count * 100) / threshold
             print(str(percent) + "%")
@@ -115,11 +120,11 @@ def callPhotoSorter():
     if(source_isOK and destiny_isOK):
         if (threshold is None or threshold == " " or 0 == len(threshold)):
                 print("All the files will be processed...")
-                mainProcess_GUImode(sourcePath, destinyPath)
+                mainProcess_GUImode(sourcePath, destinyPath, -1, keepOriginalFile_state.get())
         else:
             if threshold.isnumeric():
                 print("Only " + str(threshold) + " files")
-                mainProcess_GUImode(sourcePath, destinyPath, int(threshold))
+                mainProcess_GUImode(sourcePath, destinyPath, int(threshold), keepOriginalFile_state.get())
             else:
                 print("Wrong limit value entered")
         #print(sourcePath)
