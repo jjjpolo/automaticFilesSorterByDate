@@ -27,14 +27,18 @@ Ok, you still have left work to do,  but it is better renaming 25 folders than c
 * While developing fileSorterGUI.py needs to import fileSorterCLI.py so you must have them in the same folder
 * Of course, it is better starting by cloning this project.
 
+### Future possible features
+* Add a log file to report each action.
+* Add an asking method when detecting duplicated files. If there is a file with the same name in the destination ask if you want to replace or skip it item and what does the software should do with the next similar situations during the current job.
+
 ## Screenshots
 ### GUI Mode:
-![alt text](./gui-before.jpg)
-![alt text](./gui-during.jpg)
-![alt text](./gui-done.jpg)
-![alt text](./gui-after.jpg)
+![alt text](./images/gui-before.jpg)
+![alt text](./images/gui-during.jpg)
+![alt text](./images/gui-done.jpg)
+![alt text](./images/gui-after.jpg)
 
 ### CLI Mode
-![alt text](./cli-before.jpg)
-![alt text](./cli-during.jpg)
-![alt text](./cli-after.jpg)
+![alt text](./images/cli-before.jpg)
+![alt text](./images/cli-during.jpg)
+![alt text](./images/cli-after.jpg)
