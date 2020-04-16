@@ -58,8 +58,11 @@ destinyFolder_btn.grid(column=2, row=2, padx = (5,10), pady = 10)
 threshold_label = Label(window, text="Limit the job to :", font=("Arial Bold", 12))
 threshold_label.grid(column=0, row=3,padx = (10,5), pady = 10)
 
+def hint(event):
+    messagebox.showinfo("Hint", "Enter an integer number to limit the job or leave it blank to process all the files")
 threshold_txtbox = Entry(window,width=50)
 threshold_txtbox.grid(column=1, row=3, padx = 5, pady = 10)
+threshold_txtbox.bind("<1>", hint)
 
 threshold_label2 = Label(window, text="files", font=("Arial Bold", 12))
 threshold_label2.grid(column=2, columnspan = 3, row=3,padx = (5,10), pady = 10)
