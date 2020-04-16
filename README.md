@@ -33,12 +33,12 @@ Ok, you still have left work to do,  but it is better renaming 25 folders than c
 
 ## Screenshots
 ### GUI Mode:
-![alt text](./images/gui-before.jpg)
-![alt text](./images/gui-during.jpg)
-![alt text](./images/gui-done.jpg)
-![alt text](./images/gui-after.jpg)
+![Before](images/gui-before.JPG)
+![During](images/gui-during.JPG)
+![Done](images/gui-done.JPG)
+![After](images/gui-after.JPG)
 
 ### CLI Mode
-![alt text](./images/cli-before.jpg)
-![alt text](./images/cli-during.jpg)
-![alt text](./images/cli-after.jpg)
+![Before](images/cli-before.JPG)
+![During & Done](images/cli-during.JPG)
+![After](images/cli-after.JPG)
