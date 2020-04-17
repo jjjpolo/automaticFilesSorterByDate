@@ -26,6 +26,8 @@ Ok, you still have left work to do,  but it is better renaming 25 folders than c
 ## Development notes:
 * While developing fileSorterGUI.py needs to import fileSorterCLI.py so you must have them in the same folder
 * Of course, it is better starting by cloning this project.
+### Making exe files:
+* Use: auto-py-to-exe.exe
 
 ### Future possible features
 * Add a log file to report each action.
@@ -33,12 +35,31 @@ Ok, you still have left work to do,  but it is better renaming 25 folders than c
 
 ## Screenshots
 ### GUI Mode:
+Files Before using the software:
+
 ![Before](images/gui-before.JPG)
+
+The software working:
+
 ![During](images/gui-during.JPG)
+
+The software when the job is done:
+
 ![Done](images/gui-done.JPG)
+
+Files after using the software:
+
 ![After](images/gui-after.JPG)
 
 ### CLI Mode
+Files Before using the software:
+
 ![Before](images/cli-before.JPG)
+
+The software working:
+
 ![During & Done](images/cli-during.JPG)
+
+Files after using the software:
+
 ![After](images/cli-after.JPG)
