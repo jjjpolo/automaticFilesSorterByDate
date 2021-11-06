@@ -3,6 +3,7 @@ from datetime import datetime
 import platform #to identify the operative system used
 import shutil #it lets copy move and rename files
 
+version = "v1.1.0"
 
 def convert_date(timestamp):
     """Receives a date in epoch format and returns a string 
@@ -68,7 +69,7 @@ def mainProcess_climode(sourcePath, destinyPath, threshold = -1, keepOriginalFil
 
 
 if __name__== "__main__":
-    print("Automatic Photo Sorter v1.0.0")
+    print("Automatic Photo Sorter {0}".format(version))
     sourcePath = "./"
     destinyPath = "./"
     print ("There are: " + str(len(os.listdir(sourcePath))) + " files in the source folder.")

@@ -7,7 +7,7 @@ from tkinter import messagebox
 
 window = Tk()
 window.geometry('500x300')
-window.title("Automatic Photo Sorter v1.0.0")
+window.title("Automatic Photo Sorter {0}".format(version))
 
 #_________________________________________________ROW 0:
 
