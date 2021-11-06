@@ -1,11 +1,25 @@
 import os
 from datetime import datetime
-import platform #to dentify the oparative system used
+import platform #to identify the operative system used
 import shutil #it lets copy move and rename files
 
+
 def convert_date(timestamp):
+    """Receives a date in epoch format and returns a string 
+    human-readable format.
+
+        Parameters
+        ----------
+        timestamp : str
+            Date in epoch format.
+
+    Returns
+    -------
+    str
+        Date in a human-readable format.
+        """
     d = datetime.utcfromtimestamp(timestamp)
-    formated_date = d.strftime('%d-%m-%Y')
+    formated_date = d.strftime('%Y-%m-%d')
     return formated_date
 
 def createFolder(onWorkPath):
@@ -15,7 +29,7 @@ def createFolder(onWorkPath):
 
 def sortFile(sourcePath, file, destinyPath, keepOriginalFile = True):
     sourceFilePath = os.path.join(sourcePath, file.name)
-    if os.path.isdir(sourceFilePath): #if the current analized file is a directory skips it because we are only looking for files || FYI shutil copy can not copy folders, instead use copytree
+    if os.path.isdir(sourceFilePath): #if the current analyzed file is a directory skips it because we are only looking for files || FYI shutil copy can not copy folders, instead use copytree
         print("\n" +  str(file.name) + " is a folder, the software will skip it.")
     elif ("fileSorter" in file.name):
         print("\n " + str(file.name) + " seems to be part of fileSorter software, the software will skip it.")
