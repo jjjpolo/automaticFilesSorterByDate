@@ -19,6 +19,10 @@ Ok, you still have left work to do,  but it is better renaming 25 folders than c
 * Hence, do not let you specify the source and destiny folder
 * Pretends to be a quick solution for quick jobs.
 
+## Building exe/out files
+1. Add the following path to your environment var path
+    * C:\Users\[USERNAME]\AppData\Local\Programs\Python\Python36-32\Scripts 
+2. Run the buildExecutables.py
 ## Installation:
 * Paste fileSorterGUI.exe in the folder of your preference
 * If you want to do a quick job (see CLI release notes) paste fileSorterCLI.exe in the folder of interest.

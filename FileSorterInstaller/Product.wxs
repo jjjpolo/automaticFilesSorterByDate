@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+	<!--Step 0.- Defining global source folder variable.-->
+	<!--To use it call it this way Source="$(var.sourceFolder)foo.exe".-->
+	<?define sourceFolder="..\FileSorter\bin\dist\"?>
+	
+	<!--Step 1.- Release information.-->
+	<Product Id="*" Name="FileSorter" Language="1033" Version="1.1.0.0" 
+			 Manufacturer="Jose Juan Jaramillo Polo" 
+		     UpgradeCode="464f7135-33d6-4560-ae59-eb8339312f21">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of FileSorter is already installed." 
+					  AllowSameVersionUpgrades="no"/>
+		<MediaTemplate EmbedCab="yes"/>
+
+		<!--Step  2: Define the directory structure.-->
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+				<Directory Id="ApplicationRootDirectory" Name="FileSorter"/>
+			</Directory>
+			<Directory Id="ProgramMenuFolder">
+				<Directory Id="ApplicationProgramsFolder" Name="FileSorter"/>
+			</Directory>
+			<Directory Id="DesktopFolder" Name="Desktop">
+			</Directory>
+		</Directory>
+
+	<!--Step 3: Add files to your installer package.-->
+	<!--Step 3.1: Define the content of the folder that will be inside ProgramFilesFolder.-->
+		<DirectoryRef Id="ApplicationRootDirectory">
+			<Component Id="fileSorterGUI.exe" Guid="91de790d-6326-42a8-99c6-c344f3aa257f">
+				<File Id="fileSorterGUI.exe" Source="$(var.sourceFolder)fileSorterGUI.exe" 
+					  KeyPath="yes" Checksum="yes"/>
+			</Component>
+			<Component Id="fileSorterCLI.exe" Guid="4300f109-64fd-473c-a78e-efeec69e70aa">
+				<File Id="fileSorterCLI.exe" Source="$(var.sourceFolder)fileSorterCLI.exe" 
+					  KeyPath="yes" Checksum="yes"/>
+			</Component>
+		</DirectoryRef>
+	<!--Step 3.2: Define the content of the ApplicationsProgramsFolder in the Start Menu 
+					(it is commonly a shortcut to the main app and the uninstaller).-->
+		<DirectoryRef Id="ApplicationProgramsFolder">
+			<Component Id="ApplicationShortcut" Guid="b36ca00b-2c8d-45c8-985e-cdda3b989cee">
+				<Shortcut Id="ApplicationStartMenuShortcut"
+					Name="FolderSorterGUI"
+					Description="File scrapping and sorting (by date)."
+					Target="[#fileSorterGUI.exe]"
+					WorkingDirectory="ApplicationRootDirectory"/>
+				<Shortcut Id="UninstallProduct"             
+                          Name="Uninstall My Application"
+                          Description="Uninstalls My Application"
+                          Target="[SystemFolder]msiexec.exe"
+                          Arguments="/x [ProductCode]"/>
+			<RemoveFolder Id="RemoveApplicationProgramsFolder" 
+						  Directory="ApplicationProgramsFolder" 
+				On="uninstall"/>
+			<RegistryValue Root="HKCU" Key="Software\FileSorter" Name="installed" 
+						   Type="integer" Value="1" KeyPath="yes"/>
+			</Component>
+		</DirectoryRef>
+	<!--Step 3.3: Define the content of Desktop 
+					(it is commonly a shortcut to the main app).-->
+		<DirectoryRef Id="DesktopFolder">
+			<Component Id="ApplicationShortcutDesktop" Guid="*">
+				<Shortcut Id="DektopShortcut"
+					Name="FolderSorterGUI"
+					Description="File scrapping and sorting (by date)."
+					Target="[#fileSorterGUI.exe]"
+					WorkingDirectory="ApplicationRootDirectory"/>
+				<RemoveFolder Id="RemoveDesktopFolder" On="uninstall"/>
+				<RegistryValue
+					Root="HKCU"
+					Key="Software/CojuForOutlook"
+					Name="installed"
+					Type="integer"
+					Value="1"
+					KeyPath="yes"/>
+			</Component>
+		</DirectoryRef>
+
+		<!--Step 4: Tell WiX to install the files.-->
+		<Feature Id="MainApplication" Title="Main Application" Level="1">
+			<ComponentRef Id="fileSorterGUI.exe" />
+			<ComponentRef Id="fileSorterCLI.exe" />
+			<ComponentRef Id="ApplicationShortcut" /> 
+			<ComponentRef Id="ApplicationShortcutDesktop" />
+		</Feature>
+
+		<!--Step 5.- Define a UI for the installer. -->
+		<!--WixUI_Mondo comes from WixUIExtension as a template that displays a license.-->
+		<UIRef Id="WixUI_Mondo" />
+		<WixVariable Id="WixUILicenseRtf" Value="gpl-3.0.rtf" />
+
+		<!--Step 6.- Post installation steps.-->
+		<!--Adding FileSorter dir path to env var path.-->
+		<CustomAction Id="AddToPathEnvVar"
+              Directory="ApplicationRootDirectory"
+              Execute="commit"
+              Impersonate="no"
+              ExeCommand="setx /M path &quot;%PATH%;C:\Program Files (x86)\FileSorter&quot;"
+              Return="check" />
+
+		<!--TODO Removing FileSorter dir path to env var path.
+		<CustomAction Id="RemovePathEnvVar"
+              Directory="ApplicationRootDirectory"
+              Execute="commit"
+              Impersonate="no"
+              ExeCommand="echo test > C:\Users\joe_b\Desktop\test.txt"
+              Return="check" />
+		-->
+
+		<InstallExecuteSequence>
+			<Custom Action="AddToPathEnvVar" After="InstallInitialize" />
+			<!--TODO <Custom Action="RemovePathEnvVar" Before="RemoveFiles" />-->
+		</InstallExecuteSequence>
+		
+	</Product>
+</Wix>
