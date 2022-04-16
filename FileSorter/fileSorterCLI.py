@@ -1,300 +1,60 @@
-""" ===File Sorter CLI mode.===
+# =============================================================================
+# File Name: fileSorterCLI.py
+# =============================================================================
+# Purpose:  Makes use of the fileSorter class and provides a command line tool.
+#
+# Author:   Jose Juan Jaramillo Polo
+# License:  GPLv3
+# Notes:    
+# =============================================================================
 
-File Sorter CMD line mode is actually the essential part of this project
-which contains the main functionalities to sort a bunch of files and 
-move/copy the result into a list of directories named after the creation 
-date of each file's property. 
-
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-You should have received a copy of the GNU General Public License along with
-this program. If not, see <http://www.gnu.org/licenses/>.
-
-__author__ = "José Juan Jaramillo Polo"
-__contact__ = "josejuan.jaramillopolo@gmail.com"
-__date__ = "2022/05/02"
-__deprecated__ = False
-__license__ = "GPLv3"
-
-"""
-
-import os    
-import sys                   
-from datetime import datetime   # To handle datetime 
-import platform                 # To identify the operative system used
-import shutil                   # To copy, move, and rename files
-import argparse                 # to handle arguments from the command line.
-import time
+from fileSorter import FileSorter
+from fileSorter import __version__ as fileSorterVersion
+from importlib.metadata import files
+from jpLogger.jpLogger import *
+import argparse
+import os
+import sys
 import threading
 
-version = "v1.1.0"
-numberOfFilesProcessed = 0
-mainProcessIsRunning = False
-numberOfFilesToProcess = 0
-progress = 0 
-mutex = threading.Lock()
-
-def convert_date(timestamp):
-    """Receives a date in epoch format and returns a string 
-    human-readable format.
-
-    Parameters
-    ----------
-    timestamp : str
-        Date in epoch format.
-
-    Returns
-    -------
-    str
-        Date in a human-readable format.
-    """
-    d = datetime.utcfromtimestamp(timestamp)
-    formated_date = d.strftime('%Y-%m-%d') #YYYY-MM-DD
-    return formated_date
-
-def createFolder(newDirPath):
-    """Creates a new folder in the path specified
-
-    Parameters
-    ----------
-    newDirPath : str
-        Full directory path to be created.
-    """
-    if(False == os.path.exists(newDirPath)):
-        os.umask(0)
-        os.makedirs(newDirPath, 7777)
-
-def sortFile(sourcePath, file, destinyPath, keepOriginalFile = True):
-    """Sorts a file based on its last modification date properties.
-    If keepOriginalFile is True, the file will be copied to the, if keepOriginalFile
-    is False, the file will moved to the destination directory.
-
-    Parameters
-    ----------
-    sourcePath : str
-        Directory path where the file to be sorted is located.
-    file : str
-        Name of the file to be sorted. 
-        (This will be appended to the sourcePath to create the full path)
-    destinyPath : str
-        Directory path where the sorted file will be either copied or moved.
-    keepOriginalFile : bool, optional
-        If this set to True, the original file will be copied, otherwise it will be moved.
-
-    Returns
-    -------
-    str
-        Date in a human-readable format.
-    """
-    sourceFilePath = os.path.join(sourcePath, file.name)
-    if os.path.isdir(sourceFilePath): 
-        print("\n[sortFile] " +  str(file.name) + " is a folder, the software will skip it.")
-        return False
-    elif ("fileSorter" in file.name):
-        print("\n[sortFile] " + str(file.name) + " seems to be part of fileSorter software, the software will skip it.")
-        return False
-    else:
-        fileProperties = file.stat() # Getting file's properties. 
-        lastModificationDate = convert_date(fileProperties.st_mtime) # Getting Last Modification date and convert it from epoch to human format.
-        destinyFileFolderPath = os.path.join(destinyPath, lastModificationDate) # Creating destiny folder path based on last modification date. 
-        createFolder(destinyFileFolderPath)
-        print("\n[sortFile] " + sourceFilePath + " || " + lastModificationDate  + "  -->  " + destinyFileFolderPath)
-        
-        if(False == os.path.exists(destinyFileFolderPath + "\\" +file.name)):
-            if(keepOriginalFile):
-                shutil.copy2(sourceFilePath, destinyFileFolderPath) # FYI shutil copy can't copy folders, instead use copytree
-            else:
-                shutil.move(sourceFilePath, destinyFileFolderPath)
-            return True
-        else:
-            print("[sortFile] There is a file with the same name on the destiny folder.")
-            return False
-
-def releaseMutex(functionName = "Undefined", logging = False): 
-    """Tries to release the global mutex to protect shared variables among
-    mainProcess and updateAndDisplayProgress.
-    In case it is not possible to release the mutex it handles the exception
-    so that the software can continue.
-
-    Parameters
-    ----------
-    functionName : str
-        The name of the function that is trying to release the mutex.
-        This is mainly for logging purposes.
-    logging : bool, optional
-        Logging enable.
+def cliProgressBar(progress):
+    """Draws a progress bar on the terminal.
+    It only makes sense calling recursively this function so that the progress
+    bar is overridden every after calling (notice that is does \r when printing).
     
-    Returns
-    -------
-    bool
-        True it everything goes well and False in cases an exception shows up.
+    Parameters
+    ----------
+    progress : double
+        The percentage of progress to be drawn on the progress bar.
     """
-    global mutex
-    if(logging):
-        try:
-            print("[{0}] About to release mutex.".format(functionName))
-            mutex.release()
-        except:
-            print("[{0}] Unable to release mutex".format(functionName))
-            return False
-        print("[{0}] Mutex released successfully.".format(functionName))
-    else:
-        try:
-            mutex.release()
-        except:
-            return False
-    return True
+    bar = ('â§¯' * int(progress)) + ('-' * (100- int(progress)))
+    print(f"\r|{bar}| {progress:.2f}%",end="\r")
 
-def acquireMutex(functionName = "Undefined", logging = False): 
-    """Tries to acquire the global mutex to protect shared variables among
-    mainProcess and updateAndDisplayProgress.
-    In case it is not possible to acquire the mutex it handles the exception
-    so that the software can continue.
+def displayCliProgressBar(processReference, threadToLookAt, log):
+    """Needs to be run as a thread, this function reads the value of progress 
+    (from processReference) and calls cliProgressBar passing the updated value
+    of the progress. It also add some logs to track this process.
 
     Parameters
     ----------
-    functionName : str
-        The name of the function that is trying to acquire the mutex.
-        This is mainly for logging purposes.
-    logging : bool, optional
-        Logging enable.
-    
-    Returns
-    -------
-    bool
-        True it everything goes well and False in cases an exception shows up.
+    processReference : obj
+        An object reference to take the progress information from.
+    threadToLookAt : thread
+        A reference to the a thread to look at so that we can have 
+        one more evaluation parameter to keep or stop this thread.
+    log : obj
+        An instance of jpLogger to append data to the log file.
     """
-    global mutex
-    if(logging):
-        try:
-            print("[{0}] About to acquire mutex.".format(functionName))
-            mutex.acquire()
-        except:
-            print ("[{0}] Unable to acquire mutex".format(functionName))
-            return False
-        print("[{0}] Mutex acquired successfully.".format(functionName))
-    else:
-        try:
-            mutex.acquire()
-        except:
-            return False
-    return True
+    safeCopyOfProgress = 0
+    while safeCopyOfProgress < 100 and threadToLookAt.is_alive():
+        with processReference.mutex:
+            safeCopyOfProgress = processReference.progress
+            log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(safeCopyOfProgress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
+        cliProgressBar(safeCopyOfProgress)
+    cliProgressBar(100)
+    log.info("Progress: 100%, joining to main thread...")
 
-def updateAndDisplayProgress():
-    """Run as a thread, this function do the maths to update the progress of 
-    the process and prints its in the standard output. 
-    """
-    global progress, mutex
-    keepUpdatingProgress =  True #This var will tack mainProcessIsRunning and will be updated only after mutex.acquired()
-    time.sleep(0.15) #Waiting for global variables to be set for the 1st time.
-    while keepUpdatingProgress:
-        acquireMutex("updateAndDisplayProgress")
-        keepUpdatingProgress = mainProcessIsRunning   #Updating its value only when mutex.acquire() is called.
-        progress = (numberOfFilesProcessed * 100) / numberOfFilesToProcess
-        print("[updateAndDisplayProgress] progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} mainProcessIsRunning: {3}".format(progress, numberOfFilesProcessed, numberOfFilesToProcess, keepUpdatingProgress))
-        releaseMutex("updateAndDisplayProgress")
-        time.sleep(0.1)
-    print("[updateAndDisplayProgress] progress: 100%")
-
-def mainProcess(sourcePath, destinationPath, keepOriginalFile = True):
-    """Scans recursively all the files in the source directory an subdirectories, 
-    and passes them as a parameter to the sortFile function to be sorted based on
-    its last modification date property.
-
-    Parameters
-    ----------
-    sourcePath : str
-        Dir path from where the files will be taken.
-    destinationPath : str
-        Dir path where the sorted files will be located.
-    numberOfFiles : int
-        Limit of files to be processed. If it was set to -1 there will be no limit.
-    keepOriginalFile : bool, optional
-        Boolean flag indicating if the file should be copied or moved when sorting it.   
-    """
-    global numberOfFilesProcessed, mutex
-    if numberOfFilesProcessed >= numberOfFilesToProcess:
-        return
-    currentDirectory = os.scandir(sourcePath)
-    for path in currentDirectory:
-        acquireMutex("mainProcess")
-        if(os.path.isfile(path)):
-            if numberOfFilesProcessed >= numberOfFilesToProcess:
-                releaseMutex("mainProcess") #Releasing mutex due to end condition. 
-                return
-            if sortFile(sourcePath, path, destinationPath, keepOriginalFile):
-                numberOfFilesProcessed = numberOfFilesProcessed + 1
-            releaseMutex("mainProcess") #Releasing mutex before next for iteration.
-        else:
-            releaseMutex("mainProcess") #Releasing mutex before recursive iteration.
-            mainProcess(os.path.join(sourcePath, path.name),destinationPath, keepOriginalFile)
-
-def numberOfFilesInFolder(dirPath):
-    """Returns the number of files in the given directory (recursively).
-
-    Parameters
-    ----------
-    dirPath : str
-        Dir path from where we need the number of files.
-    
-    Returns
-    -------
-    int
-        Number of files in the given directory.
-    """
-    total = 0
-    for root, dirs, files in os.walk(dirPath):
-            total += len(files) 
-    return total
-
-def doTheJob(sourcePath, destinationPath, numberOfFiles = -1, keepOriginalFile = True, updateProgressFunction = None):
-    """This is the main organizer function which calls the needed functions in the right 
-    order, creates thread for the main process and the progress calc and display, and handles
-    the threads starting by passing the corresponding parameters to each one. 
-
-    Parameters
-    ----------
-    sourcePath : str
-        Dir path from where the files will be taken.
-    destinationPath : str
-        Dir path where the sorted files will be located.
-    numberOfFiles : int, optional
-        Limit of files to be processed. If it was set to -1 there will be no limit.
-    keepOriginalFile : bool, optional
-        Boolean flag indicating if the file should be copied or moved when sorting it.   
-    updateProgressFunction : func, optional
-        A function pointer that helps to identify who is going to update the progress (GUI or CLI mode).
-        In CLI mode it is updateAndDisplayProgress(), in GUI mode is updateProgressBar.
-
-    """
-    global numberOfFilesToProcess, numberOfFilesProcessed, mainProcessIsRunning
-    numberOfFilesProcessed = 0
-    numberOfFilesToProcess = numberOfFilesInFolder(sourcePath) if numberOfFiles == -1 else numberOfFiles
-    mainProcessIsRunning = True
-
-    mainThread = threading.Thread(target=mainProcess, args=(sourcePath, destinationPath, keepOriginalFile))
-    mainThread.start()
-    
-    if updateProgressFunction is not None: #Means that doTheJob was called by the CLI mode
-        progressUpdateThread = threading.Thread(target=updateProgressFunction, args=())
-        progressUpdateThread.start()
-    #else  #In GUI the updating progress is handled in fileSorterGUI.py
-
-    mainThread.join()               #Waiting for the mainThread to be done.
-    mainProcessIsRunning = False    #Notifying progressUpdateThread that mainThread is done.
-    if updateProgressFunction is not None:
-        progressUpdateThread.join()
-    print("[doTheJob] Process Done!")
-
-#_________________________________________________ for CLI mode
-
-def argsAreValid(sourcePath, numberOfFiles):
+def argsAreValid(sourcePath, numberOfFiles, log):
     """Evaluates if sourcePath is a directory and if numberOfFiles is a number
     within the valid range. Keep in mind that numberOfFiles set to -1 means that
     no limit has been specified so all the files will be processed.
@@ -305,17 +65,21 @@ def argsAreValid(sourcePath, numberOfFiles):
         Dir path from where the files will be taken.
     numberOfFile : int
         Limit of files to be processed.     
+    log : obj
+        An instance of jpLogger to append data to the log file.
     """
     if (str(numberOfFiles).isnumeric() or str(numberOfFiles) == "-1"):
         if os.path.isdir(sourcePath):
             return True
         else:
-            print ("[argsAreValid] {0} is not a valid sourcePath.".format(sourcePath))
+            log.error("{0} is not a valid sourcePath".format(sourcePath))
+            print("{0} is not a valid sourcePath".format(sourcePath))
     else:
-        print ("[argsAreValid] {0} is not a valid value for numberOfFiles".format(numberOfFiles))
+        log.error("{0} is not a valid value for numberOfFiles".format(numberOfFiles))
+        print("{0} is not a valid value for numberOfFiles".format(numberOfFiles))
     return False
 
-def displayArgValues(args):
+def displayArgValues(args, log):
     """Receives an object (args) made with the parse_args() method from the argparse module
     with sourcePath, destinationPath, numberOfFiles and keepOriginalFile to display
     its value
@@ -324,12 +88,69 @@ def displayArgValues(args):
     ----------
     args : argparse
         Arguments list made with the parse_args() method from the argparse module.
+    log  : obj
+        An instance of jpLogger to append data to the log file.
     """
-    print( "\t\tsourcePath        =   {0} \n \
-            \tdestinationPath   =   {1} \n \
-            \tnumberOfFiles     =   {2} \n \
-            \tkeepOriginalFiles =   {3}"
-            .format(args.sourcePath, args.destinationPath, "no limit" if args.numberOfFiles == -1 else args.numberOfFiles, args.keepOriginalFiles))
+    numberOfFilesInSourceFolder = FileSorter.numberOfFilesInFolder(args.sourcePath)
+    log.info("sourcePath: {0}".format(args.sourcePath))
+    log.info("destinationPath: {0}".format(args.destinationPath))
+    log.info("numberOfFiles: {0}".format("no limit" if args.numberOfFiles == -1 else args.numberOfFiles))
+    log.info("Number of files in this folder: {0}".format(numberOfFilesInSourceFolder))
+    log.info("keepOriginalFiles: {0}".format(args.keepOriginalFiles))
+    # The following print lines cannot be replaced with the logging class
+    # due to tab characters that would not make sense to have in the log file. 
+    print("These are the current settings:")
+    print( "\t\tSourcePath                          =   {0} \n \
+            \tNumber of files in source directory =   {1} \n \
+            \tDestination Path                    =   {2} \n \
+            \tNumber of files to be processed     =   {3} \n \
+            \tKeep Original Files                 =   {4}"
+            .format(args.sourcePath,\
+                numberOfFilesInSourceFolder,\
+                args.destinationPath,\
+                "no limit" if args.numberOfFiles == -1 else args.numberOfFiles,\
+                args.keepOriginalFiles))
+
+def doTheJob(log,args):
+    """Once the arguments were validated, this function will
+    launch the 3 threads needed to do the job. 
+    It will wait for them to join (get done) and then will 
+    return to the where this function was called. 
+
+    Parameters
+    ----------
+    log  : obj
+        An instance of jpLogger to append data to the log file.
+    args : str-list
+        Arguments passed from the command line.
+    """
+    #Objects needed instantiation:
+    masterMutex = threading.Lock()
+    fileSorterInstance = FileSorter(log, args.sourcePath, \
+                                    args.destinationPath, \
+                                    args.numberOfFiles,   \
+                                    False if (args.keepOriginalFiles.lower() == "false") else True,\
+                                    masterMutex)
+
+    # Thread instantiation: 
+    fileSorterThread = threading.Thread(target=fileSorterInstance.run, args=())
+    updateAndLogProgressThread = threading.Thread(target=fileSorterInstance.updateAndLogProgress, \
+                                                  args=(fileSorterInstance,))
+    displayCliProgressBarThread = threading.Thread(target=displayCliProgressBar,\
+                                                   args=(fileSorterInstance, fileSorterThread, log))
+    
+    # Launch threads
+    fileSorterThread.start()
+    updateAndLogProgressThread.start()
+    displayCliProgressBarThread.start()
+
+    #Waiting for threads to join.
+    updateAndLogProgressThread.join()
+    fileSorterThread.join()
+    displayCliProgressBarThread.join()
+
+    log.info("Job is done... see you next time.")
+    print("\n Job is done... see you next time.")
 
 def main(argv):
     """Receives arguments (argv) from the command line and makes a decision based on
@@ -342,8 +163,14 @@ def main(argv):
     argv : str-list
         Arguments passed from the command line.
     """
-    print("\nAutomatic Photo Sorter {0} \n".format(version))
-    parser = argparse.ArgumentParser(description = "Searchs for files recursively in a directory, \
+    # Some of the print statements cannot be replaced with the logging class
+    # due to tab characters that would not make sense to have in the log file,
+    # thus, the log is going to be in displayMode.fileOnly mode and those print 
+    # statements needed as a feedback for the user will remain in as print() function.
+    log = jpLogger("FileSorter", "fileSorter.log", logging.DEBUG, displayMode.fileOnly, 10, 50*1024*1024)
+    log.info("Automatic Photo Sorter {0}".format(fileSorterVersion))
+    print("Automatic Photo Sorter {0}".format(fileSorterVersion))
+    parser = argparse.ArgumentParser(description = "Searches for files recursively in a directory, \
                                                     gets the last modification date, \
                                                     and sorts each file based on it")
     parser.add_argument("-s", "--sourcePath",
@@ -380,22 +207,23 @@ def main(argv):
     args=parser.parse_args()
     if len(argv) == 0:
         parser.print_help()
-        print("\n\tNo arguments detected. Will use default values:")
-    else:
-        print("\n\tThese are the current settings:")
+        log.info("No arguments detected. Will use default values.")
+        print("No arguments detected. Will use default values.")
 
     # Ask user for confirmation before continuing
-    displayArgValues(args)
+    displayArgValues(args, log)
     confirmation = input("\n\tContinue? Y/n: ")
     if (confirmation.lower() == "n"):
+        log.info("Action cancelled, exiting now...")
         print("Action cancelled, exiting now...")
         sys.exit(0)
     
     # Arguments validation (directory path and numberOfFiles to be processed)    
-    if argsAreValid(args.sourcePath, args.numberOfFiles):
-        doTheJob(args.sourcePath, args.destinationPath, args.numberOfFiles, False if (args.keepOriginalFiles.lower() == "false") else True, updateAndDisplayProgress)
+    if argsAreValid(args.sourcePath, args.numberOfFiles, log):
+        doTheJob(log, args)
         sys.exit(0)
     else:
+        log.error("Error due to invalid arguments.")
         print("Error due to invalid arguments.")
         sys.exit(1)
 

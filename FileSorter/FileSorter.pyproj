@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>a93e03a7-dbb8-4b5d-ae9a-d560cae9d734</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>tools\ReleaseTools\builldExecutables.py</StartupFile>
+    <StartupFile>fileSorterGUI.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
