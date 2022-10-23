@@ -97,19 +97,22 @@ def displayArgValues(args, log):
     log.info("numberOfFiles: {0}".format("no limit" if args.numberOfFiles == -1 else args.numberOfFiles))
     log.info("Number of files in this folder: {0}".format(numberOfFilesInSourceFolder))
     log.info("keepOriginalFiles: {0}".format(args.keepOriginalFiles))
+    log.info("yesToAll: {0}".format(args.yesToAll))
     # The following print lines cannot be replaced with the logging class
     # due to tab characters that would not make sense to have in the log file. 
     print("These are the current settings:")
-    print( "\t\tSourcePath                          =   {0} \n \
-            \tNumber of files in source directory =   {1} \n \
-            \tDestination Path                    =   {2} \n \
-            \tNumber of files to be processed     =   {3} \n \
-            \tKeep Original Files                 =   {4}"
+    print("\t\tSourcePath                          = {0} \n \
+             \tNumber of files in source directory = {1} \n \
+             \tDestination Path                    = {2} \n \
+             \tNumber of files to be processed     = {3} \n \
+             \tKeep Original Files                 = {4} \n \
+             \tNo user prompts                     = {5}"
             .format(args.sourcePath,\
                 numberOfFilesInSourceFolder,\
                 args.destinationPath,\
                 "no limit" if args.numberOfFiles == -1 else args.numberOfFiles,\
-                args.keepOriginalFiles))
+                args.keepOriginalFiles, \
+                args.yesToAll))
 
 def doTheJob(log,args):
     """Once the arguments were validated, this function will
@@ -202,6 +205,14 @@ def main(argv):
                         default="True", # Default value for when no using this parameter.
                         nargs='?',
                         const="True")  # Default value for when using this parameter with no explicit value typed.
+    parser.add_argument("-y","--yesToAll",
+                        metavar="<yesToAll>",
+                        type=str, # Based on argparse documentation bool type is not recommended since void str is false. 
+                        help="By default this is set to False so the user will be prompted before starting the process.\
+                            If you want to skip any user prompts, set this to True (adding -y is good enough).",
+                        default="False", # Default value for when no using this parameter.
+                        nargs='?',
+                        const="True")  # Default value for when using this parameter with no explicit value typed.
     
     # Arguments length validation
     args=parser.parse_args()
@@ -210,10 +221,10 @@ def main(argv):
         log.info("No arguments detected. Will use default values.")
         print("No arguments detected. Will use default values.")
 
-    # Ask user for confirmation before continuing
+    # Ask user for confirmation before continuing (whenever yesToAll is "False")
     displayArgValues(args, log)
-    confirmation = input("\n\tContinue? Y/n: ")
-    if (confirmation.lower() == "n"):
+    confirmation = "y" if ("True" == args.yesToAll) else input("\n\tContinue? Y/n: ")
+    if (confirmation.lower().split(" ")[0] not in ("y", "yes")):
         log.info("Action cancelled, exiting now...")
         print("Action cancelled, exiting now...")
         sys.exit(0)
