@@ -1,38 +1,27 @@
-""" ===Build Executables.===
+# =============================================================================
+# File Name: builldExecutables.py
+# =============================================================================
+# Purpose:  This script makes use of the pyintaller tool to create the 
+#           corresponding exe/out binaries that can be run on either Windows, 
+#           Linux or Unix systems.
+#           If pyinstaller is not installed this script will do it for you.
+#
+# Author:   Jose Juan Jaramillo Polo
+# License:  GPLv3
+# Notes:    HOW TO USE IT.
+#           * DO NOT run it with Visual Studio Debugger since the current dir 
+#             (pwd) is the one for the main solution, thus the relative paths 
+#             in this scripts would not be valid.
+#           * Option 1. Using the Windows File Explorer just double click on it. 
+#           * Option 2. Build the Wix Installer Project (FileSorterInstaller), 
+#                       it will call it as a Pre Build event.
+#           * Option 3. On Unix based systems just run it from its current 
+#                       location.  
+# =============================================================================
 
-This script makes use of the pyintaller tool to create the corresponding
-exe/out binaries that can be run on either Windows, Linux or Unix systems.
-If pyinstaller is not installed this script will do it for you. 
-
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-You should have received a copy of the GNU General Public License along with
-this program. If not, see <http://www.gnu.org/licenses/>.
-
-__author__ = "José Juan Jaramillo Polo"
-__contact__ = "josejuan.jaramillopolo@gmail.com"
-__date__ = "2022/05/02"
-__deprecated__ = False
-__license__ = "GPLv3"
-
-* HOW TO USE IT.
-  * DO NOT run it with Visual Studio Debugger since the current dir (pwd) is the
-    one for the main solution, thus the relative paths in this scripts would not be valid.
-  * Option 1. Using the Windows File Explorer just double click on it. 
-  * Option 2. Build the Wix Installer Project (FileSorterInstaller), it will call it
-              as a Pre Build event.
-  * Option 3. On Unix based systems just run it from its current location. 
-"""
-
+import os
 import subprocess
 import sys
-import os
 
 def runCommand(cmd):
     """Executes a command in a shell such as batch or bash. 

@@ -1,38 +1,26 @@
-""" ===File Sorter GUI mode.===
+# =============================================================================
+# File Name: fileSorterGUI.py
+# =============================================================================
+# Purpose:  Makes use of the fileSorter class and provides a GUI tool.
+#
+# Author:   Jose Juan Jaramillo Polo
+# License:  GPLv3
+# Notes:    
+# =============================================================================
 
-File Sorter GUI is actually a wrapper/caller of fileSorterCLI.py.
-This script creates a GUI that enhance the user experience by getting
-rid the user of any interaction with a shell such as batch or bash. 
-This script needs to be in the same folder as fileSorterCLI.py.
-See fileSorterCLI.py to get more details.
-
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-You should have received a copy of the GNU General Public License along with
-this program. If not, see <http://www.gnu.org/licenses/>.
-
-__author__ = "José Juan Jaramillo Polo"
-__contact__ = "josejuan.jaramillopolo@gmail.com"
-__date__ = "2022/05/02"
-__deprecated__ = False
-__license__ = "GPLv3"
-
-"""
-
+from fileSorter import FileSorter
+from fileSorter import __version__ as fileSorterVersion
+from jpLogger.jpLogger import *
 from tkinter import *
-from tkinter import filedialog #Lets use file browser
-from tkinter.ttk import Progressbar #Lets use progress bar
-import fileSorterCLI
-import time
+from tkinter import filedialog
 from tkinter import messagebox
+from tkinter.ttk import Progressbar
 import os
+import time
 import threading
+
+#Global variables for logging
+log = jpLogger("FileSorter", "fileSorter.log", logging.DEBUG, displayMode.fileAndConsole, 10, 50*1024*1024)
 
 def selectInputFolder():
     """Shows a file dialog to select a folder from where the input will be taken,
@@ -40,81 +28,132 @@ def selectInputFolder():
     Additionally, once the source folder is selected, gets the number of files inside
     the selected folder and displays the result in the lenFiles_label GUI element. 
     """    
-    print("Select input folder...")
+    global sourceFolder_txt, lenFiles_label
+    log.info("Select source folder using the askdirectory window")
     sourcePath = filedialog.askdirectory()
-    print(sourcePath)
-    global sourceFolder_txt
+    log.info("Source dir: " + sourcePath)
     sourceFolder_txt.delete(0,"end")
     sourceFolder_txt.insert(0, sourcePath)
     if os.path.exists(sourcePath):
-        numberOfFilesInFolder = fileSorterCLI.numberOfFilesInFolder(sourcePath)
-        global lenFiles_label
-        lenFiles_label.config (text= "There are: " + str(numberOfFilesInFolder) + " files in this folder.")
+        numberOfFilesInFolder = FileSorter.numberOfFilesInFolder(sourcePath)
+        newLabelText = "There are: " + str(numberOfFilesInFolder) + " files in this folder."
+        log.info(newLabelText)
+        lenFiles_label.config (text= newLabelText)
     else:
         messagebox.showinfo("Error", "Invalid source path, try again please.")
+        log.warning("Error", "Invalid source path, try again please.")
         sourceFolder_txt.delete(0,"end")
 
 def selectOutputFolder():
     """Shows a file dialog to select a folder where the sorted files will be stored,
     then writes the chosen path in the corresponding GUI element (destinyFolder_txt).
     """ 
-    print("Select output folder...")
-    outputDiPath = filedialog.askdirectory()
-    print(outputDiPath)
     global destinyFolder_txt
+    log.info("Selecting output folder using the askdirectory window")
+    outputDiPath = filedialog.askdirectory()
+    log.info("Output dir: " + outputDiPath)
     destinyFolder_txt.delete(0,"end")
     destinyFolder_txt.insert(0, outputDiPath)
 
 def hint(event):
     """Shows a message box for when the user clicked the threshold_txt GUI element,
     to set the limit of files to be processed. 
+    
+    Parameters
+    ----------
+    event: str
+        The event that triggered the hint.
     """ 
-    messagebox.showinfo("Hint", "Enter an integer number to limit the job or leave it blank to process all the files")
+    messagebox.showinfo("Hint", "Type an integer number to limit the job or leave it blank to process all the files")
 
-def updateProgressBar():
-    """Run as a thread, this function reads the value of progress (global var in fileSorterCLI)
-    and update the value of the progress bar based on it. 
+def updateProgressBar(processReference, threadToLookAt):
+    """Needs to be run as a thread, this function reads the value of progress 
+    (from processReference) and updates the ProgressBar. 
+    Prior to start tracking progress it disables some of the GUI elements to 
+    prevent the user launches another process while this one is running.
+    It also add some logs to track this process. 
+
+    Parameters
+    ----------
+    processReference : obj
+        An object reference to take the progress information from.
+    threadToLookAt : thread
+        A reference to the a thread to look at so that we can have 
+        one more evaluation parameter to keep or stop this thread.
     """
-    print("[updateProgressBar] Progress bar thread")
-    global window, bar, start_btn
-    start_btn ["state"] = DISABLED
-    bar["value"] = 0
+    global window, bar, start_btn, sourceFolder_btn, destinyFolder_btn, keepFiles_checkbox
+    log.info("Progress bar thread")
+    start_btn         ["state"] = DISABLED
+    sourceFolder_btn  ["state"] = DISABLED
+    destinyFolder_btn ["state"] = DISABLED
+    keepFiles_checkbox["state"] = DISABLED
+    bar               ["value"] = 0
     window.update_idletasks()
+    log.info("GUI elements disabled while thread is running.")
     time.sleep(0.20) # Waiting for mainProcess to start running...
-    keepUpdatingProgressBar = True #This var will tack fileSorterCLI.mainProcessIsRunning and will be updated only after mutex.acquired()
-    while keepUpdatingProgressBar:
-        fileSorterCLI.acquireMutex("updateProgressBar")
-        progress = (fileSorterCLI.numberOfFilesProcessed * 100) / fileSorterCLI.numberOfFilesToProcess
-        bar["value"] = progress
-        keepUpdatingProgressBar = fileSorterCLI.mainProcessIsRunning
-        print("[updateProgressBar] progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} mainProcessIsRunning: {3}".format(progress, fileSorterCLI.numberOfFilesProcessed, fileSorterCLI.numberOfFilesToProcess, keepUpdatingProgressBar))
+    safeCopyOfProgress = 0
+    while safeCopyOfProgress < 100 and threadToLookAt.is_alive():
+        with processReference.mutex:
+            log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(safeCopyOfProgress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
+            safeCopyOfProgress = processReference.progress
+        bar["value"] = safeCopyOfProgress
         window.update_idletasks()
-        fileSorterCLI.releaseMutex("updateProgressBar")
         time.sleep(0.1)
     bar["value"] = 100
     window.update_idletasks()
     messagebox.showinfo(title="Info", message="Done!")
-    start_btn ["state"] = NORMAL
+    start_btn         ["state"] = NORMAL
+    sourceFolder_btn  ["state"] = NORMAL
+    destinyFolder_btn ["state"] = NORMAL
+    keepFiles_checkbox["state"] = NORMAL
+    bar               ["value"] = 0
+    log.info("GUI elements reenabled since process is done.")
 
-def doTheJobWrapper():
-    """Acts similar to 'doTheJob' function in fileSorterCLI by preparing what is needed
-    to start the main process (calling the corresponding function from fileSorterCLI).
-    Creates two main threads for calling fileSorterCLI.doTheJob and for displaying the 
-    percentage of progress in the progress bar.
+def doTheJob():
+    """Prepares what is needed to start the main process (instantiating a 
+    fileSorter object). 
+    Creates 3 main threads for: calling fileSorter.run, updateAndLogProgress 
+    (which actually calcs the progress) and one for displaying the percentage
+    of progress in the progress bar.
     """
+    log.info("GUI is about to do the job.")
     sourcePath =sourceFolder_txt.get()
     destinyPath = destinyFolder_txt.get()
     threshold = threshold_txt.get()
+    log.info("Source dir: " + sourcePath)
+    log.info("Output dir: " + destinyPath)
+    log.info("Files to be processed: " + threshold)
+    log.info("Keep original files: " + ("True" if keepOriginalFile_state.get() is True else "False"))
 
     if not os.path.exists(sourcePath):
-        messagebox.showinfo("Error", "Invalid source path!")        
+        messagebox.showinfo("Error", "Invalid source path!")
+        log.error("Source path not found")
         return
     
-    if threshold == "" or threshold == " " or threshold.isnumeric():
-        mainThread = threading.Thread(target=fileSorterCLI.doTheJob,args = (sourcePath,destinyPath,-1 if threshold == "" else int(threshold), keepOriginalFile_state.get()))
-        mainThread.start()
-        progressBarThread = threading.Thread(target=updateProgressBar,args=())
-        progressBarThread.start()
+    if threshold == "" or threshold == " " or threshold.isnumeric():        
+        #Object needed instantiation:
+        masterMutex = threading.Lock()
+        fileSorterInstance = FileSorter(log, sourcePath, destinyPath, -1 if threshold == "" else int(threshold), keepOriginalFile_state.get(),masterMutex)
+        log.info("Mutex and fileSorterInstance have been instantiated")
+
+        #Threads creation: 
+        fileSorterThread = threading.Thread(target=fileSorterInstance.run, args=())
+        updateAndLogProgressThread = threading.Thread(target=fileSorterInstance.updateAndLogProgress, args=(fileSorterInstance,))
+        updateProgressBarThread = threading.Thread(target=updateProgressBar, args=(fileSorterInstance,fileSorterThread))
+        log.info("Threads have been created and are ready to get started.")
+        
+        #Launch and wait for threads
+        fileSorterThread.start()
+        updateAndLogProgressThread.start()
+        updateProgressBarThread.start()
+        log.info("Threads are now running.")
+
+        #Somehow waiting for threads to "join" does not allow the progress bar
+        #to be updated successfully, however, from the user perspective it is
+        #not needed to wait for the threads to join since the main buttons are
+        #DISABLED while the progress is less than 100 so the user shall wait
+        #for the threads to be done.
+
     else:
         messagebox.showinfo("Error", "Wrong limit of files value!")        
         return
@@ -125,7 +164,9 @@ def main():
     global window
     window = Tk()
     window.geometry('515x280')
-    window.title("Automatic Photo Sorter {0}".format(fileSorterCLI.version))
+    window.title("Automatic Photo Sorter {0}".format(fileSorterVersion))
+    log.info("Automatic Photo Sorter {0}".format(fileSorterVersion))
+    log.info("Base GUI has been created")
 
     #----------------------------------------row separator 0:
     source_label = Label(window, text="*Source folder:", font=("Arial Bold", 12))
@@ -135,6 +176,7 @@ def main():
     sourceFolder_txt = Entry(window,width=50)
     sourceFolder_txt.grid(column=1, row=0, padx = 5, pady = (20,10))
     #||||||||||||||||||||column separator 1:
+    global sourceFolder_btn
     sourceFolder_btn = Button(window, text="...", command=selectInputFolder)
     sourceFolder_btn.grid(column=2, row=0, padx = (5,10), pady = (20,10))
 
@@ -151,6 +193,7 @@ def main():
     destinyFolder_txt = Entry(window,width=50)
     destinyFolder_txt.grid(column=1, row=2, padx = 5, pady = 10)
     #||||||||||||||||||||column separator 2:
+    global destinyFolder_btn
     destinyFolder_btn = Button(window, text="...", command=selectOutputFolder)
     destinyFolder_btn.grid(column=2, row=2, padx = (5,10), pady = 10)
 
@@ -172,17 +215,19 @@ def main():
     bar.grid(column=0, columnspan = 3, row=4,  sticky = W+E, pady= 10, padx = 10)
 
     #----------------------------------------row separator 5:
-    global keepOriginalFile_state
+    global keepOriginalFile_state, keepFiles_checkbox
     keepOriginalFile_state = BooleanVar()
     keepOriginalFile_state.set(True) #set check state
     keepFiles_checkbox = Checkbutton(window, text='Keep original files', var = keepOriginalFile_state, font=("Arial Bold", 10))
     keepFiles_checkbox.grid(column=0, row=5, padx=(10,0))
     #||||||||||||||||||||column separator 0:
     global start_btn
-    start_btn = Button(window, text=" Start ", command=doTheJobWrapper, font=("Arial Bold", 14))
+    start_btn = Button(window, text=" Start ", command=doTheJob, font=("Arial Bold", 14))
     start_btn.grid(column=0, columnspan = 3, row=5, pady = (10,20))
 
+    log.info("All the GUI elements have been added to the main view")
     window.mainloop()
 
 if __name__ == "__main__":
     main()
+    log.info("Powering off...")
