@@ -16,6 +16,7 @@ import argparse
 import os
 import sys
 import threading
+import time
 
 def cliProgressBar(progress):
     """Draws a progress bar on the terminal.
@@ -47,12 +48,27 @@ def displayCliProgressBar(processReference, threadToLookAt, log):
     """
     safeCopyOfProgress = 0
     while safeCopyOfProgress < 100 and threadToLookAt.is_alive():
-        with processReference.mutex:
-            safeCopyOfProgress = processReference.progress
-            log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(safeCopyOfProgress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
+        try:
+            with processReference.mutex:
+                safeCopyOfProgress = processReference.progress
+                log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(safeCopyOfProgress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
+        except:
+            log.warning("Could not release/acquire mutex")
         cliProgressBar(safeCopyOfProgress)
     cliProgressBar(100)
     log.info("Progress: 100%, joining to main thread...")
+
+    safeCopyOfTimeElapsed = ""
+    while safeCopyOfTimeElapsed == "":
+        try:
+            with processReference.mutex:
+                safeCopyOfTimeElapsed = processReference.timeElapsed_str
+                time.sleep(0.1)
+        except:
+            log.warning("Could not release/acquire mutex")
+    
+    log.info("Job is done. Time elapsed {0} see you next time.".format(safeCopyOfTimeElapsed))
+    print("\n Job is done. Time elapsed {0} see you next time.".format(safeCopyOfTimeElapsed))
 
 def argsAreValid(sourcePath, numberOfFiles, log):
     """Evaluates if sourcePath is a directory and if numberOfFiles is a number
@@ -127,6 +143,11 @@ def doTheJob(log,args):
     args : str-list
         Arguments passed from the command line.
     """
+
+    # Waiting for threads (i.e. using join method) blocks the progress bar
+    # so the measuring of elapsed time has been moved to the displayCliProgressBar
+    # method. I am leaving this comment here just for future personal reference.
+
     #Objects needed instantiation:
     masterMutex = threading.Lock()
     fileSorterInstance = FileSorter(log, args.sourcePath, \
@@ -147,13 +168,10 @@ def doTheJob(log,args):
     updateAndLogProgressThread.start()
     displayCliProgressBarThread.start()
 
-    #Waiting for threads to join.
+    # Waiting for threads to join.
     updateAndLogProgressThread.join()
     fileSorterThread.join()
     displayCliProgressBarThread.join()
-
-    log.info("Job is done... see you next time.")
-    print("\n Job is done... see you next time.")
 
 def main(argv):
     """Receives arguments (argv) from the command line and makes a decision based on
