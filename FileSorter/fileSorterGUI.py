@@ -19,7 +19,7 @@ import os
 import time
 import threading
 
-#Global variables for logging
+# Global variables for logging
 log = jpLogger("FileSorter", "fileSorter.log", logging.DEBUG, displayMode.fileAndConsole, 10, 50*1024*1024)
 
 def selectInputFolder():
@@ -82,6 +82,7 @@ def updateProgressBar(processReference, threadToLookAt):
         one more evaluation parameter to keep or stop this thread.
     """
     global window, bar, start_btn, sourceFolder_btn, destinyFolder_btn, keepFiles_checkbox
+
     log.info("Progress bar thread")
     start_btn         ["state"] = DISABLED
     sourceFolder_btn  ["state"] = DISABLED
@@ -93,15 +94,29 @@ def updateProgressBar(processReference, threadToLookAt):
     time.sleep(0.20) # Waiting for mainProcess to start running...
     safeCopyOfProgress = 0
     while safeCopyOfProgress < 100 and threadToLookAt.is_alive():
-        with processReference.mutex:
-            log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(safeCopyOfProgress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
-            safeCopyOfProgress = processReference.progress
+        try:
+            with processReference.mutex:
+                log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(safeCopyOfProgress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
+                safeCopyOfProgress = processReference.progress
+        except:
+            log.warning("Could not release/acquire mutex")
         bar["value"] = safeCopyOfProgress
         window.update_idletasks()
         time.sleep(0.1)
     bar["value"] = 100
-    window.update_idletasks()
-    messagebox.showinfo(title="Info", message="Done!")
+    window.update_idletasks()   
+
+    safeCopyOfTimeElapsed = ""
+    while safeCopyOfTimeElapsed == "":
+        try:
+            with processReference.mutex:
+                safeCopyOfTimeElapsed = processReference.timeElapsed_str
+                time.sleep(0.1)
+        except:
+            log.warning("Could not release/acquire mutex")
+    log.info("Job is done. Time elapsed {0} see you next time.".format(safeCopyOfTimeElapsed))
+    messagebox.showinfo(title="Info", message="\n FileSorter Job is done. Time elapsed {0} see you next time.".format(safeCopyOfTimeElapsed))
+    
     start_btn         ["state"] = NORMAL
     sourceFolder_btn  ["state"] = NORMAL
     destinyFolder_btn ["state"] = NORMAL
@@ -130,29 +145,34 @@ def doTheJob():
         log.error("Source path not found")
         return
     
-    if threshold == "" or threshold == " " or threshold.isnumeric():        
-        #Object needed instantiation:
+    if threshold == "" or threshold == " " or threshold.isnumeric():
+
+        # Waiting for threads (i.e. using join method) blocks the progress bar
+        # so the measuring of elapsed time has been moved to the updateProgressBar
+        # method. I am leaving this comment here just for future personal reference.
+
+        # Object needed instantiation:
         masterMutex = threading.Lock()
         fileSorterInstance = FileSorter(log, sourcePath, destinyPath, -1 if threshold == "" else int(threshold), keepOriginalFile_state.get(),masterMutex)
         log.info("Mutex and fileSorterInstance have been instantiated")
 
-        #Threads creation: 
+        # Threads creation: 
         fileSorterThread = threading.Thread(target=fileSorterInstance.run, args=())
         updateAndLogProgressThread = threading.Thread(target=fileSorterInstance.updateAndLogProgress, args=(fileSorterInstance,))
         updateProgressBarThread = threading.Thread(target=updateProgressBar, args=(fileSorterInstance,fileSorterThread))
         log.info("Threads have been created and are ready to get started.")
         
-        #Launch and wait for threads
+        # Launch and wait for threads
         fileSorterThread.start()
         updateAndLogProgressThread.start()
         updateProgressBarThread.start()
         log.info("Threads are now running.")
 
-        #Somehow waiting for threads to "join" does not allow the progress bar
-        #to be updated successfully, however, from the user perspective it is
-        #not needed to wait for the threads to join since the main buttons are
-        #DISABLED while the progress is less than 100 so the user shall wait
-        #for the threads to be done.
+        # Somehow waiting for threads to "join" does not allow the progress bar
+        # to be updated successfully, however, from the user perspective it is
+        # not needed to wait for the threads to join since the main buttons are
+        # DISABLED while the progress is less than 100 so the user shall wait
+        # for the threads to be done.
 
     else:
         messagebox.showinfo("Error", "Wrong limit of files value!")        

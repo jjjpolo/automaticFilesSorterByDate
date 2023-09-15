@@ -37,6 +37,7 @@ class FileSorter():
         self.numberOfFilesToProcess = self.numberOfFilesInFolder(self.sourcePath) if self.numberOfFiles == -1 else self.numberOfFiles
         self.numberOfFilesProcessed = 0
         self.progress = 0 
+        self.timeElapsed_str= ""
         
     @staticmethod
     def numberOfFilesInFolder(dirPath) -> int:
@@ -78,7 +79,8 @@ class FileSorter():
         self.log.info("Is it keeping the original files?: " + str(keepOriginalFile))
         if self.numberOfFilesProcessed >= self.numberOfFilesToProcess:
             self.log.info("Base case has been reached, returning...")
-            return
+            raise Exception("Braking recursion due to base case reached.")
+            #return
         currentDirectory = os.scandir(sourcePath)
         for path in currentDirectory:
             self.acquireMutex("doTheJob")
@@ -86,7 +88,8 @@ class FileSorter():
                 if self.numberOfFilesProcessed >= self.numberOfFilesToProcess:
                     self.releaseMutex("doTheJob") #Releasing mutex due to end condition. 
                     self.log.info("First base case has been reached, returning...")
-                    return
+                    raise Exception("Braking recursion due to 1st base case reached.")
+                    #return
                 if self.sortFile(sourcePath, path, destinationPath, keepOriginalFile):
                     self.numberOfFilesProcessed = self.numberOfFilesProcessed + 1
                 self.releaseMutex("doTheJob") #Releasing mutex before next for iteration.
@@ -95,8 +98,36 @@ class FileSorter():
                 self.doTheJob(os.path.join(sourcePath, path.name),destinationPath, keepOriginalFile)
 
     def run(self):
-        self.doTheJob(self.sourcePath, self.destinationPath, self.keepOriginalFile)
-        self.log.info("FileSorter job is done.")
+        # For measuring the time needed for this task.
+        start = time.time() 
+
+        try:
+            self.doTheJob(self.sourcePath, self.destinationPath, self.keepOriginalFile)
+        except Exception as e:
+            self.log.warning(f"Exception: {e}")
+        finally:
+            self.releaseMutex("doTheJob")
+
+        # This will wait for mutex availability, i.e. till "Base case has been reached"
+        try:
+            with self.mutex:
+            # For measuring the time elapsed.
+                # Record the end time
+                end = time.time()
+
+                # Calculate the time difference in seconds with milliseconds
+                duration_seconds = end - start
+                milliseconds = int((duration_seconds % 1) * 1000)  # Extract milliseconds
+
+                # Convert the remaining duration to hours, minutes, and seconds
+                hours = int(duration_seconds // 3600)
+                minutes = int((duration_seconds % 3600) // 60)
+                seconds = int(duration_seconds % 60)
+
+                # Format the result
+                self.timeElapsed_str = f"{hours}h {minutes}m {seconds}s {milliseconds}ms"
+        except:
+            self.log.warning("Could not release/acquire mutex")
 
     @staticmethod
     def updateAndLogProgress(processReference):
@@ -111,11 +142,14 @@ class FileSorter():
     
         """
         safeCopyOfProgress = 0
-        while safeCopyOfProgress < 100: 
-            with processReference.mutex:
-                processReference.progress = (processReference.numberOfFilesProcessed * 100) / processReference.numberOfFilesToProcess
-                processReference.log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(processReference.progress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
-                safeCopyOfProgress = processReference.progress
+        while safeCopyOfProgress < 100:
+            try: 
+                with processReference.mutex:
+                    processReference.progress = (processReference.numberOfFilesProcessed * 100) / processReference.numberOfFilesToProcess
+                    processReference.log.info("Progress: {0}% numberOfFilesProcessed: {1} numberOfFilesToProcess: {2} ".format(processReference.progress, processReference.numberOfFilesProcessed, processReference.numberOfFilesToProcess))
+                    safeCopyOfProgress = processReference.progress
+            except:
+                processReference.log.warning("Could not release/acquire mutex")
             time.sleep(0.1)
         processReference.log.info("Progress: 100%, job is done.")
 
