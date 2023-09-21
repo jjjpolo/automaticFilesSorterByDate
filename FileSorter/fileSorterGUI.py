@@ -18,9 +18,14 @@ from tkinter.ttk import Progressbar
 import os
 import time
 import threading
+import sys
 
 # Global variables for logging
-log = jpLogger("FileSorter", "fileSorter.log", logging.DEBUG, displayMode.fileAndConsole, 10, 50*1024*1024)
+if sys.platform.startswith('win'):
+    appdata_path = os.environ['APPDATA'] + "\\FileSorter\\"
+    log = jpLogger("FileSorter", appdata_path + "fileSorterGUI.log", logging.DEBUG, displayMode.fileAndConsole, 10, 50*1024*1024)
+else:
+    log = jpLogger("FileSorter", "fileSorterGUI.log", logging.DEBUG, displayMode.fileAndConsole, 10, 50*1024*1024)
 
 def selectInputFolder():
     """Shows a file dialog to select a folder from where the input will be taken,
@@ -143,6 +148,11 @@ def doTheJob():
     if not os.path.exists(sourcePath):
         messagebox.showinfo("Error", "Invalid source path!")
         log.error("Source path not found")
+        return
+    
+    if not os.path.exists(destinyPath):
+        messagebox.showinfo("Error", "Invalid destiny path!")
+        log.error("Destiny path not found")
         return
     
     if threshold == "" or threshold == " " or threshold.isnumeric():

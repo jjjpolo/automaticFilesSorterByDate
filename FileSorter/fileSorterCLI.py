@@ -188,7 +188,11 @@ def main(argv):
     # due to tab characters that would not make sense to have in the log file,
     # thus, the log is going to be in displayMode.fileOnly mode and those print 
     # statements needed as a feedback for the user will remain in as print() function.
-    log = jpLogger("FileSorter", "fileSorter.log", logging.DEBUG, displayMode.fileOnly, 10, 50*1024*1024)
+    if sys.platform.startswith('win'):
+        appdata_path = os.environ['APPDATA'] + "\\FileSorter\\"
+        log = jpLogger("FileSorter", appdata_path + "fileSorterCLI.log", logging.DEBUG, displayMode.fileAndConsole, 10, 50*1024*1024)
+    else:
+        log = jpLogger("FileSorter", "fileSorterCLI.log", logging.DEBUG, displayMode.fileAndConsole, 10, 50*1024*1024)
     log.info("Automatic Photo Sorter {0}".format(fileSorterVersion))
     print("Automatic Photo Sorter {0}".format(fileSorterVersion))
     parser = argparse.ArgumentParser(description = "Searches for files recursively in a directory, \
