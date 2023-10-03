@@ -1,0 +1,3 @@
+[submodule "FileSorter/jpLogger"]
+	path = FileSorter/jpLogger
+	url = https://github.com/jjjpolo/jpLogger

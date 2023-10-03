@@ -1,12 +1,25 @@
 # Automatic Files Sorter By Date
-It is a personal little project to help me sorting my thousands of photos and videos taken by myself.
-Sorts the files inside a folder by date and moves them into new folders with the date as the name's folder. (Group by date).
-It's useful helping you sorting photos and videos since it grupos them by last date modification, then you only need to rename each folder.
-Ok, you still have left work to do,  but it is better renaming 25 folders than classifying 2000 files, is not it?
+This little personal project aims to be a tool to facilitate sorting my photos and videos. 
+It sorts the files inside a folder by date and moves/copies them into new folders with the date as the name's folder. (Group by date).
+It's useful helping you sorting photos and videos since it groups them by last date modification, then you only need to rename each folder.
+Ok, you still have left work to do, but it is better renaming 25 folders than classifying 2000 files, don't you think so?
+
 
 ## Release notes
 
-### Version 1.0.0
+### Version 1.1
+* Logs available in C:\ProgramData\FileSorter.
+* Installer for Windows Os has been added. 
+* Error and exception handling have been added.
+* Some fixes and optimizations have been included.
+#### GUI mode:
+* Progress bar works fine now thanks to multithreading.
+#### CLI mode:
+* It lets you set the source and destiny folder.
+* It lets you define the limit of files to be processed.
+* CLI progress bar added thanks to multithreading. 
+
+### Version 1.0
 * There are two available modes: GUI and CLI
 #### GUI mode:
 * Lets you choose the source folder and the destiny folder
@@ -19,19 +32,10 @@ Ok, you still have left work to do,  but it is better renaming 25 folders than c
 * Hence, do not let you specify the source and destiny folder
 * Pretends to be a quick solution for quick jobs.
 
-## Installation:
-* Paste fileSorterGUI.exe in the folder of your preference
-* If you want to do a quick job (see CLI release notes) paste fileSorterCLI.exe in the folder of interest.
-
-## Development notes:
-* While developing fileSorterGUI.py needs to import fileSorterCLI.py so you must have them in the same folder
-* Of course, it is better starting by cloning this project.
-### Making exe files:
-* Use: auto-py-to-exe.exe
-
-### Future possible features
-* Add a log file to report each action.
-* Add an asking method when detecting duplicated files. If there is a file with the same name in the destination ask if you want to replace or skip it item and what does the software should do with the next similar situations during the current job.
+## Building exe/out files (Windows Os only).
+Open the project in Visual Studio 22 and build the solution. 
+The .exe files and the installer will be created once the process is done.
+For more details, check the prebuild steps of the Wix Installer project. 
 
 ## Screenshots
 ### GUI Mode:
