@@ -94,27 +94,6 @@
 		<WixVariable Id="WixUILicenseRtf" Value="gpl-3.0.rtf" />
 
 		<!--Step 6.- Post installation steps.-->
-		<!--Adding FileSorter dir path to env var path.-->
-		<CustomAction Id="AddToPathEnvVar"
-              Directory="ApplicationRootDirectory"
-              Execute="commit"
-              Impersonate="no"
-              ExeCommand="setx /M path &quot;%PATH%;C:\Program Files (x86)\FileSorter&quot;"
-              Return="check" />
-
-		<!--TODO Removing FileSorter dir path to env var path.
-		<CustomAction Id="RemovePathEnvVar"
-              Directory="ApplicationRootDirectory"
-              Execute="commit"
-              Impersonate="no"
-              ExeCommand="echo test > C:\Users\joe_b\Desktop\test.txt"
-              Return="check" />
-		-->
-
-		<InstallExecuteSequence>
-			<Custom Action="AddToPathEnvVar" After="InstallInitialize" />
-			<!--TODO <Custom Action="RemovePathEnvVar" Before="RemoveFiles" />-->
-		</InstallExecuteSequence>
-		
+		<!--TODO: Investigate how to add the installation forlder to the env path.-->
 	</Product>
 </Wix>

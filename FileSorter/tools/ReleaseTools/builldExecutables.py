@@ -56,4 +56,4 @@ if __name__ == "__main__":
     * version file path is based on where specpaht puts spec files. Spec files are the main descriptor files.
     '''
     runCommand("pyinstaller --onefile --icon=../tools/ReleaseTools/icons/cli.ico --distpath=../../bin/dist --workpath=../../bin/build --specpath=../../bin --version-file=../tools/ReleaseTools/versionFile.txt ../../fileSorterCLI.py")
-    runCommand("pyinstaller --onefile --icon=../tools/ReleaseTools/icons/gui.ico --distpath=../../bin/dist --workpath=../../bin/build --specpath=../../bin --version-file=../tools/ReleaseTools/versionFile.txt ../../fileSorterGUI.py")
+    runCommand("pyinstaller --onefile --noconsole --icon=../tools/ReleaseTools/icons/gui.ico --distpath=../../bin/dist --workpath=../../bin/build --specpath=../../bin --version-file=../tools/ReleaseTools/versionFile.txt ../../fileSorterGUI.py")
